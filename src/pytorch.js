@@ -1368,46 +1368,6 @@ pytorch.Execution = class {
             }
             return obj;
         });
-        this._registerFunction('torch._utils._rebuild_tensor', function (storage, storage_offset, size, stride) {
-            return {
-                __module__: storage.__module__,
-                __name__: storage.__name__.replace('Storage', 'Tensor'),
-                storage: storage,
-                storage_offset: storage_offset,
-                size: size,
-                stride: stride
-            };
-        });
-        this._registerFunction('torch._utils._rebuild_tensor_v2', function (storage, storage_offset, size, stride, requires_grad, backward_hooks) {
-            return {
-                __module__: storage.__module__,
-                __name__: storage.__name__.replace('Storage', 'Tensor'),
-                storage: storage,
-                storage_offset: storage_offset,
-                size: size,
-                stride: stride,
-                requires_grad: requires_grad,
-                backward_hooks:  backward_hooks
-            };
-        });
-        this._registerFunction('torch._utils._rebuild_parameter', function(data, requires_grad, backward_hooks) {
-            let obj = self.invoke('torch.nn.parameter.Parameter', [ data, requires_grad ]);
-            obj.backward_hooks = backward_hooks;
-            return obj;
-        });
-        this._registerFunction('torch._utils._rebuild_qtensor', function(storage, storage_offset, size, stride, quantizer_params, requires_grad, backward_hooks) {
-            return {
-                __module__: storage.__module__,
-                __name__: storage.__name__.replace('Storage', 'Tensor'),
-                storage: storage,
-                storage_offset: storage_offset,
-                size: size,
-                stride: stride,
-                quantizer_params: quantizer_params,
-                requires_grad:requires_grad,
-                backward_hooks: backward_hooks
-            };
-        });
         this._registerFunction('numpy.core.multiarray.scalar', function(dtype, rawData) {
             let data = rawData;
             if (rawData.constructor !== Uint8Array) {
@@ -1484,14 +1444,60 @@ pytorch.Execution = class {
         this._registerFunction('ops.prim.RaiseException', function(message) {
             throw new pytorch.Error(message);
         });
-        this._registerFunction('torch.add', function(left, right) {
-            if (typeof left === 'number' && typeof right === 'number') {
-                return left * right;
+        this._registerFunction('range', function(start, stop, step) {
+            if (stop === undefined && step === undefined) {
+                return Array(start).keys();
             }
-            throw new pytorch.Error('Unknown torch.add expression type.');
-        });
-        this._registerFunction('range', function(/* start, stop, step */) {
             throw new pytorch.Error('Unsupported range function.');
+        });
+        this._registerFunction('torch._utils._rebuild_tensor', function (storage, storage_offset, size, stride) {
+            return {
+                __module__: storage.__module__,
+                __name__: storage.__name__.replace('Storage', 'Tensor'),
+                storage: storage,
+                storage_offset: storage_offset,
+                size: size,
+                stride: stride
+            };
+        });
+        this._registerFunction('torch._utils._rebuild_tensor_v2', function (storage, storage_offset, size, stride, requires_grad, backward_hooks) {
+            return {
+                __module__: storage.__module__,
+                __name__: storage.__name__.replace('Storage', 'Tensor'),
+                storage: storage,
+                storage_offset: storage_offset,
+                size: size,
+                stride: stride,
+                requires_grad: requires_grad,
+                backward_hooks:  backward_hooks
+            };
+        });
+        this._registerFunction('torch._utils._rebuild_parameter', function(data, requires_grad, backward_hooks) {
+            let obj = self.invoke('torch.nn.parameter.Parameter', [ data, requires_grad ]);
+            obj.backward_hooks = backward_hooks;
+            return obj;
+        });
+        this._registerFunction('torch._utils._rebuild_qtensor', function(storage, storage_offset, size, stride, quantizer_params, requires_grad, backward_hooks) {
+            return {
+                __module__: storage.__module__,
+                __name__: storage.__name__.replace('Storage', 'Tensor'),
+                storage: storage,
+                storage_offset: storage_offset,
+                size: size,
+                stride: stride,
+                quantizer_params: quantizer_params,
+                requires_grad:requires_grad,
+                backward_hooks: backward_hooks
+            };
+        });
+        this._registerFunction('torch._set_item', function(dict, key, value) {
+            dict[key] = value;
+        });
+        this._registerFunction('torch.__contains__', function(dict, key) {
+            return dict[key] !== undefined;
+        });
+        this._registerFunction('torch.__derive_index', function(index, start, step) {
+            return start + index * step;
         });
         this._registerFunction('torch.__is__', function(left, right) {
             if (left === null && right === null) {
@@ -1500,7 +1506,7 @@ pytorch.Execution = class {
             if ((left !== null && right === null) || (left === null && right !== null)) {
                 return false;
             }
-            throw new pytorch.Error('Unknown expression type.');
+            throw new pytorch.Error("Unknown 'torch.__is__' expression type.");
         });
         this._registerFunction('torch.__isnot__', function(left, right) {
             if (left === null && right === null) {
@@ -1509,20 +1515,44 @@ pytorch.Execution = class {
             if ((left !== null && right === null) || (left === null && right !== null)) {
                 return true;
             }
-            throw new pytorch.Error('Unknown expression type.');
+            throw new pytorch.Error("Unknown 'torch.__isnot__' expression type.");
         });
         this._registerFunction('torch.__not__', function(value) {
             if (typeof value === 'boolean') {
                 return !value;
             }
-            throw new pytorch.Error('Unknown expression type.');
+            throw new pytorch.Error("Unknown 'torch.__not__' expression type.");
+        });
+        this._registerFunction('torch.__range_length', function(lo, hi, step) {
+            if (step === 0) {
+                throw new pytorch.Error('range() arg 3 must not be zero');
+            }
+            if (step > 0 && lo < hi) {
+                return 1 + (hi - 1 - lo) / step;
+            }
+            else if (step < 0 && lo > hi) {
+                return 1 + (lo - 1 - hi) / (0 - step);
+            }
+            return 0;
         });
         this._registerFunction('torch._unwrap_optional', function(value) {
             return value; // TODO
         });
+        this._registerFunction('torch.add', function(left, right) {
+            if (typeof left === 'number' && typeof right === 'number') {
+                return left * right;
+            }
+            throw new pytorch.Error('Unknown torch.add expression type.');
+        });
         this._registerFunction('torch.append', function(tensors, tensor) {
             tensors.push(tensor);
             return tensor;
+        });
+        this._registerFunction('torch.dict', function(args) {
+            if (args) {
+                throw new pytorch.Error("'torch.dict' arguments not supported.");
+            }
+            return {};
         });
         this._registerFunction('torch.dim', function(tensor) {
             if (tensor && tensor.size) {
@@ -1537,7 +1567,7 @@ pytorch.Execution = class {
             if (typeof left === 'number' && typeof right === 'number') {
                 return left === right;
             }
-            throw new pytorch.Error('Unknown expression type.');
+            throw new pytorch.Error("Unknown 'torch.eq' expression type.");
         });
         this._registerFunction('torch.floordiv', function(/* left, right */) {
             return undefined;
@@ -1546,7 +1576,7 @@ pytorch.Execution = class {
             if (typeof left === 'number' && typeof right === 'number') {
                 return left > right;
             }
-            throw new pytorch.Error('Unknown expression type.');
+            throw new pytorch.Error("Unknown 'torch.gt' expression type.");
         });
         this._registerFunction('torch.jit._pickle.build_boollist', function(data) {
             return data;
@@ -1560,11 +1590,17 @@ pytorch.Execution = class {
         this._registerFunction('torch.jit._pickle.build_tensorlist', function(data) {
             return data;
         });
+        this._registerFunction('torch.keys', function(dict) {
+            return Object.keys(dict);
+        });
         this._registerFunction('torch.len', function(value) {
             if (value) {
                 return value.length;
             }
             return undefined;
+        });
+        this._registerFunction('torch.list', function(args) {
+            return args;
         });
         this._registerFunction('torch.list_with_default', function(size /*, defaults */) {
             return size;
@@ -1573,13 +1609,13 @@ pytorch.Execution = class {
             if (typeof left === 'number' && typeof right === 'number') {
                 return left < right;
             }
-            throw new pytorch.Error('Unknown torch.lt expression type.');
+            throw new pytorch.Error("Unknown 'torch.lt' expression type.");
         });
         this._registerFunction('torch.mul', function(left, right) {
             if (typeof left === 'number' && typeof right === 'number') {
                 return left * right;
             }
-            throw new pytorch.Error('Unknown torch.mul expression type.');
+            throw new pytorch.Error("Unknown 'torch.mul' expression type.");
         });
         this._registerFunction('torch.ne', function(left, right) {
             if (typeof left === 'number' && typeof right === 'number') {
@@ -1594,7 +1630,7 @@ pytorch.Execution = class {
             if (Array.isArray(left) && Array.isArray(right) && left.length === right.length) {
                 return false;
             }
-            throw new pytorch.Error('Unknown torch.ne expression type.');
+            throw new pytorch.Error("Unknown 'torch.ne' expression type.");
         });
         this._registerFunction('torch.q_scale', function(/* tensor */) {
             return -1; // TODO
@@ -1607,6 +1643,23 @@ pytorch.Execution = class {
                 return tensor.size;
             }
             return undefined;
+        });
+        this._registerFunction('torch.slice', function(l, start, end, step) {
+            if (step !== 1) {
+                throw new pytorch.Error('Slicing only supports step=1');
+            }
+            start = Math.max(0, l.length);
+            end = Math.max(l.length, end);
+            return l.slice(start, end);
+        });
+        this._registerFunction('torch.sub', function(left, right) {
+            if (typeof left === 'number' && typeof right === 'number') {
+                return left * right;
+            }
+            throw new pytorch.Error("Unknown 'torch.sub' expression type.");
+        });
+        this._registerFunction('torch.values', function(dict) {
+            return Object.keys(dict).map((key) => dict[key]);
         });
         this._registerFunction('torch.warn', function() {
         });
@@ -1820,11 +1873,18 @@ pytorch.Execution = class {
                     throw new pytorch.Error("Unknown condition.");
                 }
                 case 'for': {
-                    /*
-                    if (statement.target.length == 1) {
+                    if (statement.target.length == 1 && 
+                        statement.variable.length === 1 && statement.variable[0].type === 'id') {
                         const range = this.expression(statement.target[0], context);
+                        const variable = statement.variable[0];
+                        let loop = []
+                        for (const value of range) {
+                            loop.push({ type: '=', target: variable, expression: { type: 'number', value: value }});
+                            loop = loop.concat(statement.body.statements);
+                        }
+                        statements = loop.concat(statements);
+                        break;
                     }
-                    */
                     throw new pytorch.Error("Unsupported 'for' statement.");
                 }
                 case 'call': {
@@ -2971,8 +3031,10 @@ pytorch.Container.Zip.Execution = class extends pytorch.Execution {
                     while (inputSchemas.length > 0) {
                         let inputSchema = inputSchemas.shift();
                         const argument = this.expression(callArgs.shift(), context);
-                        while (inputSchema.option === 'optional' && Array.isArray(argument) && inputSchema.type !== 'T[]' && inputSchemas.length > 0) {
-                            inputSchema = inputSchemas.shift();
+                        if ((Array.isArray(argument) && inputSchema.type !== 'T[]') ||
+                            (!Array.isArray(argument) && inputSchema.type === 'T[]')) {
+                            next = true;
+                            break;
                         }
                         const parameters = Array.isArray(argument) ? argument : [ argument ];
                         let inputs = [];
